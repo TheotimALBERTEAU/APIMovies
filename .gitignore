@@ -1,1 +1,26 @@
+# Dossiers et fichiers créés par l'environnement Node/npm
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+*.pid
+*.tgz
+.npm
+.eslintcache
+
+# Fichiers de configuration sensibles
 .env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+
+# Fichiers de couverture de test et builds
+coverage
+.nyc_output
+build/
+dist/
+
+# Fichiers et dossiers spécifiques à l'IDE (WebStorm)
+.idea/
