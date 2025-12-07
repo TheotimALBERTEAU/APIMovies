@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { httpApiResponse } = require('../core/http-library');
+const { slugify } = require('../core/helpers-library');
 
 const Movies = require('../models/Movies.model');
 
@@ -15,12 +16,15 @@ router.get('/', async (request, response) => {
     }
 });
 
-router.get('/:title', async (request, response) => {
+router.get('/:slug', async (request, response) => {
+    const rawSlug = request.params.slug;
 
-    const titleParam = request.params.title;
+    // 1. Convertir l'entrée de l'URL en slug standard
+    const standardizedSlug = slugify(rawSlug);
 
     try {
-        const foundMovie = await Movies.findOne({ title: titleParam });
+        // 2. Rechercher par le champ 'slug' de la base de données
+        const foundMovie = await Movies.findOne({ slug: standardizedSlug });
 
         if (!foundMovie) {
             return httpApiResponse(response, "404", "Movie not found", null);
@@ -29,10 +33,9 @@ router.get('/:title', async (request, response) => {
         return httpApiResponse(response, "200", "Movie found", foundMovie);
 
     } catch (error) {
-        console.error("Error when recovering movie by title", error);
-        return httpApiResponse(response, "500", "Server Error during movie recovery", null);
+        // ...
     }
-})
+});
 
 module.exports = router;
 
