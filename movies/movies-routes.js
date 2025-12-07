@@ -15,4 +15,25 @@ router.get('/', async (request, response) => {
     }
 });
 
+router.get('/:title', async (request, response) => {
+
+    const titleParam = request.params.title;
+
+    try {
+        const foundMovie = await Movies.findOne({ title: titleParam });
+
+        if (!foundMovie) {
+            return httpApiResponse(response, "404", "Movie not found", null);
+        }
+
+        return httpApiResponse(response, "200", "Movie found", foundMovie);
+
+    } catch (error) {
+        console.error("Error when recovering movie by title", error);
+        return httpApiResponse(response, "500", "Server Error during movie recovery", null);
+    }
+})
+
+module.exports = router;
+
 
