@@ -24,3 +24,5 @@ dist/
 
 # Fichiers et dossiers spécifiques à l'IDE (WebStorm)
 .idea/
+
+docker-compose.override.yml
