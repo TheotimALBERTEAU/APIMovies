@@ -30,9 +30,11 @@ module.exports.moviesConn = moviesConn;
 app.use(express.json());
 app.use(cors());
 
-const moviesRoutes = require('./movies/movies-routes');
+const moviesRoutes = require('./routes/movies-routes');
+const usersRoutes = require('./routes/users-routes');
 
-app.use('/movies', moviesRoutes);
+app.use('/routes', moviesRoutes);
+app.use('/users', usersRoutes)
 
 app.listen(3000, () => {
     console.log('Server started on port 3000');
