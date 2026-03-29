@@ -110,17 +110,17 @@ router.get('/show-progress/:userId', async (request, response) => {
     try {
         const { userId } = request.params;
 
-        // On récupère l'utilisateur et on ne sélectionne que le champ 'progress'
-        const user = await Users.findById(userId).select('progress');
+        // .populate('progress.movieId') va chercher les infos dans la collection Movies
+        const user = await Users.findById(userId)
+            .select('progress')
+            .populate('progress.movieId');
 
         if (!user) {
             return httpApiResponse(response, "404", "Utilisateur non trouvé", null);
         }
 
-        // On extrait uniquement les IDs de films du tableau de progression
-        const movieIds = user.progress.map(item => item.movieId);
-
-        return httpApiResponse(response, "200", "Liste des films récupérée", movieIds);
+        // On retourne le tableau d'objets contenant le film complet et le temps de lecture
+        return httpApiResponse(response, "200", "Liste des films récupérée", user.progress);
     } catch (error) {
         console.error("Error fetching progress", error);
         return httpApiResponse(response, "500", "Erreur lors de la récupération", null);

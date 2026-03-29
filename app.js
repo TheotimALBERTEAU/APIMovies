@@ -33,7 +33,7 @@ app.use(cors());
 const moviesRoutes = require('./routes/movies-routes');
 const usersRoutes = require('./routes/users-routes');
 
-app.use('/routes', moviesRoutes);
+app.use('/movies', moviesRoutes);
 app.use('/users', usersRoutes)
 
 app.listen(3000, () => {
