@@ -2,10 +2,12 @@ const express = require('express');
 const router = express.Router();
 const { httpApiResponse } = require('../core/http-library');
 const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
 
 const Users = require('../models/Users.model');
 
-router.post('/connection', async (request, response) => {
+router.post('/login', async (request, response) => {
     try {
         const { email, password } = request.body;
 
@@ -20,9 +22,16 @@ router.post('/connection', async (request, response) => {
             return httpApiResponse(response, "402", "Identifiants invalides", null);
         }
 
+        const token = jwt.sign(
+            { id: user._id, email: user.email },
+            process.env.JWT_SECRET,
+            { expiresIn: '1h' }
+        );
+
         return httpApiResponse(response, "200", "Connexion réussie", {
             id: user._id,
-            email: user.email
+            email: user.email,
+            data: token
         });
     } catch (error) {
         console.error("Error during connection", error);
