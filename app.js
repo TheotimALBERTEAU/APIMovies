@@ -19,7 +19,7 @@ if (!MONGODB_URI) {
 // 2. CONFIGURATION DES MIDDLEWARES GLOBAUX
 // Le CORS doit TOUJOURS être en premier pour intercepter les requêtes OPTIONS (Preflight)
 app.use(cors({
-    origin: 'http://localhost:4200',
+    origin: process.env.FRONTEND_URL,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
