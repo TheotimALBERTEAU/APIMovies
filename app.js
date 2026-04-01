@@ -2,40 +2,62 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
+const cookieParser = require('cookie-parser');
 
-// charger variables d'environnement du fichier .env
+// 1. CHARGEMENT DES VARIABLES D'ENVIRONNEMENT
 dotenv.config();
 
 const app = express();
-
-// CONNEXION DB
 const MONGODB_URI = process.env.MONGODB_URI;
 
+// Vérification immédiate de la présence de l'URI
 if (!MONGODB_URI) {
     console.error('ERROR: MONGODB_URI environment variable is missing');
     process.exit(1);
 }
 
+// 2. CONFIGURATION DES MIDDLEWARES GLOBAUX
+// Le CORS doit TOUJOURS être en premier pour intercepter les requêtes OPTIONS (Preflight)
+app.use(cors({
+    origin: 'http://localhost:4200',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Analyseurs de corps de requête et de cookies
+app.use(express.json());
+app.use(cookieParser());
+
+// Empêcher la mise en cache pour les routes d'authentification
+app.use((req, res, next) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    next();
+});
+
+// 3. CONNEXION À LA BASE DE DONNÉES
 const connectionOptions = {
     retryWrites: true,
     w: 'majority'
 };
 
 const moviesConn = mongoose.createConnection(MONGODB_URI + 'Movies', connectionOptions);
-moviesConn.on('connected', () => console.log('DB Connected'));
+
+moviesConn.on('connected', () => console.log('DB Connected to Movies collection'));
 moviesConn.on('error', (err) => console.log('DB connexion error:', err.message));
 
+// Export de la connexion pour les modèles
 module.exports.moviesConn = moviesConn;
 
-app.use(express.json());
-app.use(cors());
-
+// 4. DÉFINITION DES ROUTES
 const moviesRoutes = require('./routes/movies-routes');
 const usersRoutes = require('./routes/users-routes');
 
 app.use('/movies', moviesRoutes);
-app.use('/users', usersRoutes)
+app.use('/users', usersRoutes);
 
-app.listen(3000, () => {
-    console.log('Server started on port 3000');
+// 5. LANCEMENT DU SERVEUR
+const PORT = 3000;
+app.listen(PORT, () => {
+    console.log(`Server started on port ${PORT}`);
 });

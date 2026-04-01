@@ -4,9 +4,24 @@ const { httpApiResponse } = require('../core/http-library');
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
-const cookieParser = require('cookie-parser');
 
 const Users = require('../models/Users.model');
+
+const authenticateToken = (req, res, next) => {
+    const token = req.cookies.token;
+
+    if (!token) {
+        return httpApiResponse(res, "401", "Non connecté", null);
+    }
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+        if (err) {
+            return httpApiResponse(res, "403", "Session expirée", null);
+        }
+        req.user = user;
+        next();
+    });
+};
 
 router.post('/login', async (request, response) => {
     try {
@@ -26,25 +41,31 @@ router.post('/login', async (request, response) => {
         const token = jwt.sign(
             { id: user._id, email: user.email },
             process.env.JWT_SECRET,
-            { expiresIn: '1h' }
+            { expiresIn: '5h' }
         );
 
         response.cookie('token', token, {
-            httpOnly: true,   // Empêche le JavaScript de lire le cookie (Anti-XSS)
-            secure: false,    // Mets à 'true' quand tu seras en HTTPS (production)
-            sameSite: 'Lax',  // Protection contre les attaques CSRF
-            maxAge: 3600000   // Expire après 1h (en millisecondes)
+            httpOnly: true,
+            secure: false,
+            sameSite: 'Lax',
+            maxAge: 3600000
         });
 
         return httpApiResponse(response, "200", "Connexion réussie", {
             id: user._id,
-            email: user.email,
-            data: token
+            email: user.email
         });
     } catch (error) {
         console.error("Error during connection", error);
         return httpApiResponse(response, "500", "Server Error during connection", error);
     }
+});
+
+router.get('/me', authenticateToken, (req, res) => {
+    return httpApiResponse(res, "200", "Utilisateur authentifié", {
+        id: req.user.id,
+        email: req.user.email
+    });
 });
 
 router.post('/signup', async (request, response) => {
@@ -127,7 +148,6 @@ router.get('/show-progress/:userId', async (request, response) => {
     try {
         const { userId } = request.params;
 
-        // .populate('progress.movieId') va chercher les infos dans la collection Movies
         const user = await Users.findById(userId)
             .select('progress')
             .populate('progress.movieId');
@@ -136,7 +156,6 @@ router.get('/show-progress/:userId', async (request, response) => {
             return httpApiResponse(response, "404", "Utilisateur non trouvé", null);
         }
 
-        // On retourne le tableau d'objets contenant le film complet et le temps de lecture
         return httpApiResponse(response, "200", "Liste des films récupérée", user.progress);
     } catch (error) {
         console.error("Error fetching progress", error);
