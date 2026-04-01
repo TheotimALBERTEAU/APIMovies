@@ -68,6 +68,16 @@ router.get('/me', authenticateToken, (req, res) => {
     });
 });
 
+router.post('/logout', (req, res) => {
+    res.clearCookie('token', {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'Lax',
+        path: '/'
+    });
+    return httpApiResponse(res, "200", "Déconnexion réussie", null);
+});
+
 router.post('/signup', async (request, response) => {
     try {
         const { email, password, passwordConfirm, pseudo } = request.body;
