@@ -16,7 +16,7 @@ router.get('/', async (request, response) => {
     }
 });
 
-router.get('/:slug', async (request, response) => {
+router.get('/watch:slug', async (request, response) => {
     const rawSlug = request.params.slug;
 
     // 1. Convertir l'entrée de l'URL en slug standard
@@ -34,6 +34,20 @@ router.get('/:slug', async (request, response) => {
 
     } catch (error) {
         // ...
+    }
+});
+
+router.get('/search', async (req, res) => {
+    const searchTerm = req.query.q;
+
+    try {
+        const movies = await Movies.find({
+            title: { $regex: searchTerm, $options: 'i' }
+        }).limit(10);
+
+        res.json({ code: "200", data: movies });
+    } catch (err) {
+        res.json({ code: "500", message: err.message });
     }
 });
 
