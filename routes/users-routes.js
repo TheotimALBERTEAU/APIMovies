@@ -4,6 +4,7 @@ const { httpApiResponse } = require('../core/http-library');
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
+const cookieParser = require('cookie-parser');
 
 const Users = require('../models/Users.model');
 
@@ -28,6 +29,13 @@ router.post('/login', async (request, response) => {
             { expiresIn: '1h' }
         );
 
+        response.cookie('token', token, {
+            httpOnly: true,   // Empêche le JavaScript de lire le cookie (Anti-XSS)
+            secure: false,    // Mets à 'true' quand tu seras en HTTPS (production)
+            sameSite: 'Lax',  // Protection contre les attaques CSRF
+            maxAge: 3600000   // Expire après 1h (en millisecondes)
+        });
+
         return httpApiResponse(response, "200", "Connexion réussie", {
             id: user._id,
             email: user.email,
@@ -41,10 +49,10 @@ router.post('/login', async (request, response) => {
 
 router.post('/signup', async (request, response) => {
     try {
-        const { email, password, passwordconfirm, pseudo } = request.body;
+        const { email, password, passwordConfirm, pseudo } = request.body;
 
         // 1. Validation de la correspondance des mots de passe
-        if (password !== passwordconfirm) {
+        if (password !== passwordConfirm) {
             return httpApiResponse(response, "400", "Les mots de passe ne correspondent pas", null);
         }
 
