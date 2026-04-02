@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const { httpApiResponse } = require('../core/http-library');
 const bcrypt = require('bcrypt')
@@ -121,24 +122,29 @@ router.post('/update-progress', async (request, response) => {
     try {
         const { userId, movieId, currentTime } = request.body;
 
+        const uId = new mongoose.Types.ObjectId(userId);
+        const mId = new mongoose.Types.ObjectId(movieId);
+        console.log(uId, mId, currentTime)
+
         // CAS 1 : Si le temps est 0, on retire le film de la liste
         if (currentTime <= 0) {
             await Users.updateOne(
-                { _id: userId },
-                { $pull: { progress: { movieId: movieId } } }
+                { _id: uId },
+                { $pull: { progress: { movieId: mId } } }
             );
             return httpApiResponse(response, "200", "Progression réinitialisée et film retiré", null);
         }
 
         // CAS 2 : On cherche si le film existe déjà dans l'historique
-        const user = await Users.findOne({ _id: userId, "progress.movieId": movieId });
+        const user = await Users.findOne({ _id: uId, "progress.movieId": mId });
 
         if (user) {
             // Mise à jour du temps pour un film déjà commencé
             await Users.updateOne(
-                { _id: userId, "progress.movieId": movieId },
+                { _id: uId, "progress.movieId": mId },
                 {
                     $set: {
+                        "progress.$.movieId": mId,
                         "progress.$.currentTime": currentTime,
                         "progress.$.lastUpdated": new Date()
                     }
@@ -147,10 +153,13 @@ router.post('/update-progress', async (request, response) => {
         } else {
             // Ajout d'un nouveau film (seulement si currentTime > 0)
             await Users.updateOne(
-                { _id: userId },
+                { _id: uId },
                 {
                     $push: {
-                        progress: { movieId, currentTime, lastUpdated: new Date() }
+                        progress: {
+                            "movieId": mId,
+                            "currentTime": currentTime,
+                            "lastUpdated": new Date() }
                     }
                 }
             );
