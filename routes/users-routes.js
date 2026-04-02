@@ -34,7 +34,6 @@ router.post('/login', async (request, response) => {
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
-        console.log(isMatch);
         if (!isMatch) {
             return httpApiResponse(response, "402", "Identifiants invalides", null);
         }
@@ -124,7 +123,6 @@ router.post('/update-progress', async (request, response) => {
 
         const uId = new mongoose.Types.ObjectId(userId);
         const mId = new mongoose.Types.ObjectId(movieId);
-        console.log(uId, mId, currentTime)
 
         // CAS 1 : Si le temps est 0, on retire le film de la liste
         if (currentTime <= 0) {
@@ -184,7 +182,13 @@ router.get('/show-progress/:userId', async (request, response) => {
             return httpApiResponse(response, "404", "Utilisateur non trouvé", null);
         }
 
-        return httpApiResponse(response, "200", "Liste des films récupérée", user.progress);
+        const sortedProgress = user.progress.sort((a, b) => {
+            const dateA = new Date(a.lastUpdated).getTime();
+            const dateB = new Date(b.lastUpdated).getTime();
+            return dateB - dateA; // Tri décroissant
+        });
+
+        return httpApiResponse(response, "200", "Liste des films récupérée", sortedProgress);
     } catch (error) {
         console.error("Error fetching progress", error);
         return httpApiResponse(response, "500", "Erreur lors de la récupération", null);
