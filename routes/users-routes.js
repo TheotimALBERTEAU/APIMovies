@@ -48,7 +48,7 @@ router.post('/login', async (request, response) => {
             httpOnly: true,
             secure: false,
             sameSite: 'Lax',
-            maxAge: 3600000
+            maxAge: 18000000
         });
 
         return httpApiResponse(response, "200", "Connexion réussie", {
