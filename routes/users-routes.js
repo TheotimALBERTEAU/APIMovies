@@ -121,7 +121,16 @@ router.post('/update-progress', async (request, response) => {
     try {
         const { userId, movieId, currentTime } = request.body;
 
-        // On cherche l'utilisateur et on vérifie s'il a déjà ce film dans son historique
+        // CAS 1 : Si le temps est 0, on retire le film de la liste
+        if (currentTime <= 0) {
+            await Users.updateOne(
+                { _id: userId },
+                { $pull: { progress: { movieId: movieId } } }
+            );
+            return httpApiResponse(response, "200", "Progression réinitialisée et film retiré", null);
+        }
+
+        // CAS 2 : On cherche si le film existe déjà dans l'historique
         const user = await Users.findOne({ _id: userId, "progress.movieId": movieId });
 
         if (user) {
@@ -136,7 +145,7 @@ router.post('/update-progress', async (request, response) => {
                 }
             );
         } else {
-            // Ajout d'un nouveau film à la liste de lecture
+            // Ajout d'un nouveau film (seulement si currentTime > 0)
             await Users.updateOne(
                 { _id: userId },
                 {
@@ -150,7 +159,7 @@ router.post('/update-progress', async (request, response) => {
         return httpApiResponse(response, "200", "Progression sauvegardée", null);
     } catch (error) {
         console.error("Erreur progression:", error);
-        return httpApiResponse(response, "500", "Erreur serveur lors de la sauvegarde", null);
+        return httpApiResponse(response, "500", "Erreur serveur", null);
     }
 });
 
