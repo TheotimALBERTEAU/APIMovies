@@ -51,6 +51,27 @@ router.get('/search', async (req, res) => {
     }
 });
 
+router.get('/:genre', async (req, res) => {
+    try {
+        const genreParam = req.params.genre;
+
+        const movies = await Movies.find({
+            genre: { $regex: new RegExp("^" + genreParam + "$", "i") }
+        }).sort({ _id: -1 });
+
+        res.status(200).json({
+            code: "200",
+            message: `Movies from genre : ${genreParam} found`,
+            data: movies
+        });
+    } catch (error) {
+        res.status(500).json({
+            code: "500",
+            message: error.message
+        });
+    }
+});
+
 module.exports = router;
 
 
