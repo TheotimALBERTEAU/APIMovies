@@ -7,7 +7,8 @@ const Movies = require('../models/Movies.model');
 
 router.get('/', async (request, response) => {
     try {
-        const movies = await Movies.find();
+        const movies = await Movies.find()
+            .sort({ _id: -1 });
         
         return httpApiResponse(response, "200", "Movies list recovered", movies);
     } catch (error) {
