@@ -57,9 +57,13 @@ const moviesSchema = new mongoose.Schema({
     slug: {
         type: String,
         required: true,
-        unique: true, // Garanti qu'il n'y a pas deux slugs identiques
+        unique: true,
         lowercase: true
     },
+    casting: [{
+        name: String,
+        slug: String,
+    }],
 }, {
     timestamps: true
 });
