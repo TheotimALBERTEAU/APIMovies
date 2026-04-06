@@ -17,7 +17,6 @@ if (!MONGODB_URI) {
 }
 
 // 2. CONFIGURATION DES MIDDLEWARES GLOBAUX
-// Le CORS doit TOUJOURS être en premier pour intercepter les requêtes OPTIONS (Preflight)
 app.use(cors({
     origin: process.env.FRONTEND_URL,
     credentials: true,
@@ -52,9 +51,11 @@ module.exports.moviesConn = moviesConn;
 // 4. DÉFINITION DES ROUTES
 const moviesRoutes = require('./routes/movies-routes');
 const usersRoutes = require('./routes/users-routes');
+const actorsRoutes = require('./routes/actors-routes');
 
 app.use('/movies', moviesRoutes);
 app.use('/users', usersRoutes);
+app.use('/actors', actorsRoutes);
 
 // 5. LANCEMENT DU SERVEUR
 const PORT = 3000;
