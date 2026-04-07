@@ -4,6 +4,7 @@ const { httpApiResponse } = require('../core/http-library');
 const { slugify } = require('../core/helpers-library');
 
 const Actors = require('../models/Actors.model');
+const Movies = require('../models/Movies.model');
 
 router.get('/', async (request, response) => {
     try {
@@ -30,6 +31,27 @@ router.get('/:slug', async (request, response) => {
         console.error("Error when recovering Slug", error);
         httpApiResponse(response, "500", "Server Error when recovering Slug", error);
     }
-})
+});
+
+router.get('/:actorSlug/movies', async (req, res) => {
+    try {
+        const { actorSlug } = req.params;
+
+        const movies = await Movies.find({
+            'casting.slug': actorSlug
+        });
+
+        res.status(200).json({
+            code: "200",
+            data: movies
+        });
+    } catch (error) {
+        res.status(500).json({
+            code: "500",
+            message: "Erreur lors de la récupération des films de l'acteur",
+            error: error.message
+        });
+    }
+});
 
 module.exports = router;
