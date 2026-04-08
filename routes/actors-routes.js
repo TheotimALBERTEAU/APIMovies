@@ -18,17 +18,17 @@ router.get('/', async (request, response) => {
     }
 });
 
-router.get('/search', async (req, res) => {
-    const searchTerm = req.query.q;
+router.get('/search', async (request, response) => {
+    const searchTerm = request.query.q;
 
     try {
         const actors = await Actors.find({
-            title: { $regex: searchTerm, $options: 'i' }
+            name: { $regex: searchTerm, $options: 'i' }
         }).limit(10);
 
-        res.json({ code: "200", data: actors });
-    } catch (err) {
-        res.json({ code: "500", message: err.message });
+        return httpApiResponse(response, "200", `Actors from ${searchTerm} found`, actors);
+    } catch (error) {
+        httpApiResponse(response, "500", "Server Error when recovering actors search", error);
     }
 });
 
