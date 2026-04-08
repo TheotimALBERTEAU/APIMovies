@@ -18,6 +18,20 @@ router.get('/', async (request, response) => {
     }
 });
 
+router.get('/search', async (req, res) => {
+    const searchTerm = req.query.q;
+
+    try {
+        const actors = await Actors.find({
+            title: { $regex: searchTerm, $options: 'i' }
+        }).limit(10);
+
+        res.json({ code: "200", data: actors });
+    } catch (err) {
+        res.json({ code: "500", message: err.message });
+    }
+});
+
 router.get('/:slug', async (request, response) => {
     const rawSlug = request.params.slug;
     try {
