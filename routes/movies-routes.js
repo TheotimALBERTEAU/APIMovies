@@ -17,7 +17,7 @@ router.get('/', async (request, response) => {
     }
 });
 
-router.get('/watch:slug', async (request, response) => {
+router.get('/view/:slug', async (request, response) => {
     const rawSlug = request.params.slug;
 
     // 1. Convertir l'entrée de l'URL en slug standard
@@ -34,7 +34,7 @@ router.get('/watch:slug', async (request, response) => {
         return httpApiResponse(response, "200", "Movie found", foundMovie);
 
     } catch (error) {
-        // ...
+        return httpApiResponse(response, "500", "Server Error when movies recovering", error);
     }
 });
 
