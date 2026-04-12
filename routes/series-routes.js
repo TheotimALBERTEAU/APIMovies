@@ -85,7 +85,7 @@ router.get('/view/:slug/:season/:episode', async (req, res) => {
         const eNum = parseInt(episode);
         const serie = await Series.findOne(
             { slug: slug, "seasons.season": sNum },
-            { "seasons.$": 1, title: 1, casting: 1, year: 1 }
+            { "seasons.$": 1, title: 1, casting: 1, year: 1, author: 1, genre: 1, cover: 1 }
         );
 
         if (!serie) return res.status(404).json({ message: "Série ou Saison non trouvée" });
@@ -112,7 +112,10 @@ router.get('/view/:slug/:season/:episode', async (req, res) => {
                 serieTitle: serie.title,
                 year: serie.year,
                 casting: finalCasting,
-                ...episodeData
+                genre: serie.genre,
+                author: serie.author,
+                ...episodeData,
+                cover: serie.cover
             }
         });
     } catch (err) {
