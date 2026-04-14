@@ -7,6 +7,8 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const Users = require('../models/Users.model');
+const Series = require('../models/Series.model');
+const Movies = require('../models/Movies.model');
 
 const authenticateToken = (req, res, next) => {
     const token = req.cookies.token;
@@ -119,23 +121,60 @@ router.post('/signup', async (request, response) => {
 
 router.post('/update-progress', async (request, response) => {
     try {
-        const { userId, mediaId, mediaType, seasonNumber, episodeNumber, currentTime } = request.body;
+        const { userId, mediaId, mediaType, currentTime } = request.body;
+
+        // On gère les valeurs nulles pour les films pour éviter le NaN
+        const seasonNumber = request.body.seasonNumber ? parseInt(request.body.seasonNumber) : null;
+        const episodeNumber = request.body.episodeNumber ? parseInt(request.body.episodeNumber) : null;
+        const cTime = parseFloat(currentTime);
 
         const uId = new mongoose.Types.ObjectId(userId);
         const mId = new mongoose.Types.ObjectId(mediaId);
 
-        const query = { _id: uId, "progress.mediaId": mId };
-        const user = await Users.findOne(query);
+        let durationMinutes = 0;
 
-        if (user) {
+        // 1. Récupération de la durée
+        if (mediaType === 'Series') {
+            const seriesDoc = await Series.findById(mId);
+            if (seriesDoc && seriesDoc.seasons) {
+                const seasonDoc = seriesDoc.seasons.find(s => s.season == seasonNumber);
+                const ep = seasonDoc?.episodes.find(e => e.episode == episodeNumber);
+                if (ep) durationMinutes = parseFloat(ep.duration);
+            }
+        } else {
+            const movie = await Movies.findById(mId);
+            durationMinutes = movie ? parseFloat(movie.duration) : 0;
+        }
+
+        const totalDurationSeconds = durationMinutes * 60;
+        const threshold = totalDurationSeconds * 0.95;
+
+        console.log(`Vérification : ${cTime}s / ${totalDurationSeconds}s (Seuil: ${threshold}s)`);
+
+        // 2. CONDITION DE SUPPRESSION (Seuil 95% ou Reset)
+        if ((totalDurationSeconds > 0 && cTime >= threshold) || cTime <= 0) {
+            await Users.updateOne(
+                { _id: uId },
+                { $pull: { progress: { mediaId: mId, seasonNumber, episodeNumber } } }
+            );
+            return httpApiResponse(response, "200", "Nettoyé", null);
+        }
+
+        // 3. MISE À JOUR OU AJOUT
+        // On construit la requête dynamiquement pour éviter les NaN/Null dans l'indexation
+        const query = {
+            _id: uId,
+            "progress.mediaId": mId,
+            "progress.seasonNumber": seasonNumber,
+            "progress.episodeNumber": episodeNumber
+        };
+
+        const userProgressExists = await Users.findOne(query);
+
+        if (userProgressExists) {
             await Users.updateOne(
                 query,
-                {
-                    $set: {
-                        "progress.$.currentTime": currentTime,
-                        "progress.$.lastUpdated": new Date()
-                    }
-                }
+                { $set: { "progress.$.currentTime": cTime, "progress.$.lastUpdated": new Date() } }
             );
         } else {
             await Users.updateOne(
@@ -143,19 +182,21 @@ router.post('/update-progress', async (request, response) => {
                 {
                     $push: {
                         progress: {
-                            mediaId: mediaId,
-                            mediaType: mediaType,
-                            seasonNumber: seasonNumber,
-                            episodeNumber: episodeNumber,
-                            currentTime: currentTime,
+                            mediaId: mId,
+                            mediaType,
+                            seasonNumber,
+                            episodeNumber,
+                            currentTime: cTime,
                             lastUpdated: new Date()
                         }
                     }
                 }
             );
         }
+
         return httpApiResponse(response, "200", "Succès", null);
     } catch (error) {
+        console.error("Erreur critique update-progress:", error);
         return httpApiResponse(response, "500", "Erreur serveur", null);
     }
 });
@@ -166,7 +207,6 @@ router.get('/show-progress/:userId', async (request, response) => {
 
         const user = await Users.findById(userId)
             .select('progress')
-            // On populate mediaId sans filtre select pour avoir accès aux saisons et au casting global
             .populate('progress.mediaId');
 
         if (!user) {
@@ -179,13 +219,11 @@ router.get('/show-progress/:userId', async (request, response) => {
                 const media = item.mediaId.toObject();
                 const prog = item.toObject();
 
-                // Si c'est une série, on extrait les infos de l'épisode précis
                 if (prog.mediaType === 'Series' && media.seasons) {
                     const season = media.seasons.find(s => s.season === prog.seasonNumber);
                     if (season) {
                         const episode = season.episodes.find(e => e.episode === prog.episodeNumber);
                         if (episode) {
-                            // Fusion du casting (Série + Épisode) comme dans ta route /view
                             const fullCasting = [...(media.casting || []), ...(episode.casting || [])];
                             const seenNames = new Set();
                             const uniqueCasting = fullCasting.filter(actor => {
@@ -196,19 +234,18 @@ router.get('/show-progress/:userId', async (request, response) => {
                                 return true;
                             });
 
-                            // On remplace mediaId par un objet hybride contenant les infos de l'épisode
                             return {
                                 ...prog,
                                 mediaId: {
                                     _id: media._id,
-                                    title: media.title, // "Loki"
-                                    episodeTitle: episode.title, // "Un destin exceptionnel"
+                                    title: media.title,
+                                    episodeTitle: episode.title,
                                     cover: episode.cover,
                                     slug: media.slug,
                                     type: media.type,
-                                    duration: episode.duration, // Durée de l'épisode et non de la série
+                                    duration: episode.duration,
                                     genre: media.genre,
-                                    casting: uniqueCasting.slice(0, 10), // On limite pour le slider
+                                    casting: uniqueCasting.slice(0, 10),
                                     link: episode.link,
                                     episodeNumber: episode.episode,
                                     seasonNumber: season.season
