@@ -119,53 +119,43 @@ router.post('/signup', async (request, response) => {
 
 router.post('/update-progress', async (request, response) => {
     try {
-        const { userId, movieId, currentTime } = request.body;
+        const { userId, mediaId, mediaType, seasonNumber, episodeNumber, currentTime } = request.body;
 
         const uId = new mongoose.Types.ObjectId(userId);
-        const mId = new mongoose.Types.ObjectId(movieId);
+        const mId = new mongoose.Types.ObjectId(mediaId);
 
-        // CAS 1 : Si le temps est 0, on retire le film de la liste
-        if (currentTime <= 0) {
-            await Users.updateOne(
-                { _id: uId },
-                { $pull: { progress: { movieId: mId } } }
-            );
-            return httpApiResponse(response, "200", "Progression réinitialisée et film retiré", null);
-        }
-
-        // CAS 2 : On cherche si le film existe déjà dans l'historique
-        const user = await Users.findOne({ _id: uId, "progress.movieId": mId });
+        const query = { _id: uId, "progress.mediaId": mId };
+        const user = await Users.findOne(query);
 
         if (user) {
-            // Mise à jour du temps pour un film déjà commencé
             await Users.updateOne(
-                { _id: uId, "progress.movieId": mId },
+                query,
                 {
                     $set: {
-                        "progress.$.movieId": mId,
                         "progress.$.currentTime": currentTime,
                         "progress.$.lastUpdated": new Date()
                     }
                 }
             );
         } else {
-            // Ajout d'un nouveau film (seulement si currentTime > 0)
             await Users.updateOne(
                 { _id: uId },
                 {
                     $push: {
                         progress: {
-                            "movieId": mId,
-                            "currentTime": currentTime,
-                            "lastUpdated": new Date() }
+                            mediaId: mediaId,
+                            mediaType: mediaType,
+                            seasonNumber: seasonNumber,
+                            episodeNumber: episodeNumber,
+                            currentTime: currentTime,
+                            lastUpdated: new Date()
+                        }
                     }
                 }
             );
         }
-
-        return httpApiResponse(response, "200", "Progression sauvegardée", null);
+        return httpApiResponse(response, "200", "Succès", null);
     } catch (error) {
-        console.error("Erreur progression:", error);
         return httpApiResponse(response, "500", "Erreur serveur", null);
     }
 });
@@ -176,19 +166,65 @@ router.get('/show-progress/:userId', async (request, response) => {
 
         const user = await Users.findById(userId)
             .select('progress')
-            .populate('progress.movieId');
+            // On populate mediaId sans filtre select pour avoir accès aux saisons et au casting global
+            .populate('progress.mediaId');
 
         if (!user) {
             return httpApiResponse(response, "404", "Utilisateur non trouvé", null);
         }
 
-        const sortedProgress = user.progress.sort((a, b) => {
-            const dateA = new Date(a.lastUpdated).getTime();
-            const dateB = new Date(b.lastUpdated).getTime();
-            return dateB - dateA; // Tri décroissant
-        });
+        const enrichedProgress = user.progress
+            .filter(item => item.mediaId !== null)
+            .map(item => {
+                const media = item.mediaId.toObject();
+                const prog = item.toObject();
 
-        return httpApiResponse(response, "200", "Liste des films récupérée", sortedProgress);
+                // Si c'est une série, on extrait les infos de l'épisode précis
+                if (prog.mediaType === 'Series' && media.seasons) {
+                    const season = media.seasons.find(s => s.season === prog.seasonNumber);
+                    if (season) {
+                        const episode = season.episodes.find(e => e.episode === prog.episodeNumber);
+                        if (episode) {
+                            // Fusion du casting (Série + Épisode) comme dans ta route /view
+                            const fullCasting = [...(media.casting || []), ...(episode.casting || [])];
+                            const seenNames = new Set();
+                            const uniqueCasting = fullCasting.filter(actor => {
+                                if (!actor.name) return false;
+                                const nameKey = actor.name.trim().toLowerCase();
+                                if (seenNames.has(nameKey)) return false;
+                                seenNames.add(nameKey);
+                                return true;
+                            });
+
+                            // On remplace mediaId par un objet hybride contenant les infos de l'épisode
+                            return {
+                                ...prog,
+                                mediaId: {
+                                    _id: media._id,
+                                    title: media.title, // "Loki"
+                                    episodeTitle: episode.title, // "Un destin exceptionnel"
+                                    cover: episode.cover,
+                                    slug: media.slug,
+                                    type: media.type,
+                                    duration: episode.duration, // Durée de l'épisode et non de la série
+                                    genre: media.genre,
+                                    casting: uniqueCasting.slice(0, 10), // On limite pour le slider
+                                    link: episode.link,
+                                    episodeNumber: episode.episode,
+                                    seasonNumber: season.season
+                                }
+                            };
+                        }
+                    }
+                }
+                return prog;
+            });
+
+        const sortedProgress = enrichedProgress.sort((a, b) =>
+            new Date(b.lastUpdated) - new Date(a.lastUpdated)
+        );
+
+        return httpApiResponse(response, "200", "Progression récupérée", sortedProgress);
     } catch (error) {
         console.error("Error fetching progress", error);
         return httpApiResponse(response, "500", "Erreur lors de la récupération", null);

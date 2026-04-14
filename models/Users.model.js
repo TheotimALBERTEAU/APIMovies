@@ -17,7 +17,18 @@ const usersSchema = new mongoose.Schema({
         required: true
     },
     progress: [{
-        movieId: { type: mongoose.Schema.Types.ObjectId, ref: 'Movies' },
+        mediaId: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: true,
+            refPath: 'progress.mediaType'
+        },
+        mediaType: {
+            type: String,
+            required: true,
+            enum: ['Movies', 'Series']
+        },
+        seasonNumber: Number,
+        episodeNumber: Number,
         currentTime: Number,
         lastUpdated: { type: Date, default: Date.now }
     }],
