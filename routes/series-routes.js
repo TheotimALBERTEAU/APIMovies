@@ -83,18 +83,22 @@ router.get('/view/:slug/:season/:episode', async (req, res) => {
         const { slug, season, episode } = req.params;
         const sNum = parseInt(season);
         const eNum = parseInt(episode);
+
         const serie = await Series.findOne(
             { slug: slug, "seasons.season": sNum },
-            { "seasons.$": 1, title: 1, casting: 1, year: 1, author: 1, genre: 1, cover: 1 }
+            // AJOUT de _id: 1 ici pour être sûr de récupérer l'ID de la série
+            { _id: 1, "seasons.$": 1, title: 1, casting: 1, year: 1, author: 1, genre: 1, cover: 1 }
         );
 
         if (!serie) return res.status(404).json({ message: "Série ou Saison non trouvée" });
 
         const foundEpisode = serie.seasons[0].episodes.find(e => e.episode === eNum);
         if (!foundEpisode) return res.status(404).json({ message: "Épisode non trouvé" });
+
         const globalCasting = serie.casting || [];
         const episodeCasting = foundEpisode.casting || [];
         const fullCasting = [...globalCasting, ...episodeCasting];
+
         const seenNames = new Set();
         const uniqueCasting = fullCasting.filter(actor => {
             if (!actor.name) return false;
@@ -103,12 +107,14 @@ router.get('/view/:slug/:season/:episode', async (req, res) => {
             seenNames.add(nameKey);
             return true;
         });
+
         const finalCasting = uniqueCasting.slice(0, 20);
-        const { casting, ...episodeData } = foundEpisode.toObject();
+        const { casting, _id, ...episodeData } = foundEpisode.toObject();
 
         res.json({
             code: "200",
             data: {
+                _id: serie._id,
                 serieTitle: serie.title,
                 year: serie.year,
                 casting: finalCasting,
