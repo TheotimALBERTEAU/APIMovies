@@ -85,20 +85,21 @@ router.get('/view/:slug/:season/:episode', async (req, res) => {
         const eNum = parseInt(episode);
 
         const serie = await Series.findOne(
-            { slug: slug, "seasons.season": sNum },
-            // AJOUT de _id: 1 ici pour être sûr de récupérer l'ID de la série
-            { _id: 1, "seasons.$": 1, title: 1, casting: 1, year: 1, author: 1, genre: 1, cover: 1 }
+            { slug: slug },
+            { _id: 1, seasons: 1, title: 1, casting: 1, year: 1, author: 1, genre: 1, cover: 1, slug: 1 }
         );
 
-        if (!serie) return res.status(404).json({ message: "Série ou Saison non trouvée" });
+        if (!serie) return res.status(404).json({ message: "Série non trouvée" });
 
-        const foundEpisode = serie.seasons[0].episodes.find(e => e.episode === eNum);
+        const foundSeason = serie.seasons.find(s => s.season === sNum);
+        if (!foundSeason) return res.status(404).json({ message: "Saison non trouvée" });
+
+        const foundEpisode = foundSeason.episodes.find(e => e.episode === eNum);
         if (!foundEpisode) return res.status(404).json({ message: "Épisode non trouvé" });
 
         const globalCasting = serie.casting || [];
         const episodeCasting = foundEpisode.casting || [];
         const fullCasting = [...globalCasting, ...episodeCasting];
-
         const seenNames = new Set();
         const uniqueCasting = fullCasting.filter(actor => {
             if (!actor.name) return false;
@@ -108,7 +109,6 @@ router.get('/view/:slug/:season/:episode', async (req, res) => {
             return true;
         });
 
-        const finalCasting = uniqueCasting.slice(0, 20);
         const { casting, _id, ...episodeData } = foundEpisode.toObject();
 
         res.json({
@@ -117,11 +117,13 @@ router.get('/view/:slug/:season/:episode', async (req, res) => {
                 _id: serie._id,
                 serieTitle: serie.title,
                 year: serie.year,
-                casting: finalCasting,
+                casting: uniqueCasting.slice(0, 20),
                 genre: serie.genre,
                 author: serie.author,
+                slug: serie.slug,
                 ...episodeData,
-                cover: serie.cover
+                cover: serie.cover,
+                totalSeasons: serie.seasons.length
             }
         });
     } catch (err) {
