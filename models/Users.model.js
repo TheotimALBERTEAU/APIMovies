@@ -16,6 +16,10 @@ const usersSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    profileSettings: {
+        bannerColor: { type: String, default: '#5e0000' },
+        profilePic: { type: String, default: '' }
+    },
     progress: [{
         mediaId: {
             type: mongoose.Schema.Types.ObjectId,
@@ -38,7 +42,22 @@ const usersSchema = new mongoose.Schema({
             mediaType: { type: String, enum: ['Movies', 'Series', 'Animes'] },
             addedAt: { type: Date, default: Date.now }
         }
-    ]
+    ],
+    viewingHistory: [{
+        mediaId: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: true,
+            refPath: 'viewingHistory.mediaType'
+        },
+        mediaType: {
+            type: String,
+            required: true,
+            enum: ['Movies', 'Series', 'Animes']
+        },
+        seasonNumber: Number,
+        episodeNumber: Number,
+        watchedAt: { type: Date, default: Date.now }
+    }]
 }, {
     timestamps: true
 }, {

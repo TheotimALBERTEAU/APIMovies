@@ -120,6 +120,33 @@ router.post('/signup', async (request, response) => {
     }
 });
 
+router.patch('/update-profile', async (req, res) => {
+    try {
+        const { userId, bannerColor, profilePic } = req.body;
+
+        // On prépare l'objet de mise à jour dynamiquement
+        const updateData = {};
+        if (bannerColor) updateData['profileSettings.bannerColor'] = bannerColor;
+        if (profilePic) updateData['profileSettings.profilePic'] = profilePic;
+
+        const updatedUser = await Users.findByIdAndUpdate(
+            userId,
+            { $set: updateData },
+            { new: true }
+        );
+
+        if (!updatedUser) {
+            return httpApiResponse(res, "404", "Utilisateur non trouvé", null);
+        }
+
+        return httpApiResponse(res, "200", "Profil mis à jour", {
+            profileSettings: updatedUser.profileSettings
+        });
+    } catch (error) {
+        return httpApiResponse(res, "500", "Erreur lors de la mise à jour", error);
+    }
+});
+
 router.post('/update-progress', async (request, response) => {
     try {
         const { userId, mediaId, mediaType, currentTime } = request.body;
@@ -327,6 +354,60 @@ router.get('/favorites/:userId', async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ code: 500, message: error.message });
+    }
+});
+
+router.post('/history/add', async (req, res) => {
+    try {
+        const { userId, mediaId, mediaType } = req.body;
+
+        if (!userId || !mediaId || !mediaType) {
+            return httpApiResponse(res, "400", "Données manquantes (userId, mediaId ou mediaType)", null);
+        }
+        await Users.findByIdAndUpdate(userId, {
+            $pull: { viewingHistory: { mediaId: mediaId } }
+        });
+        const updatedUser = await Users.findByIdAndUpdate(
+            userId,
+            {
+                $push: {
+                    viewingHistory: {
+                        mediaId,
+                        mediaType,
+                        watchedAt: new Date()
+                    }
+                }
+            },
+            { new: true }
+        );
+        if (!updatedUser) {
+            return httpApiResponse(res, "404", "Utilisateur non trouvé", null);
+        }
+        return httpApiResponse(res, "200", "Historique mis à jour avec succès", null);
+    } catch (error) {
+        console.error("Erreur history/add:", error);
+        return httpApiResponse(res, "500", "Erreur serveur lors de la mise à jour de l'historique", error);
+    }
+});
+
+router.get('/history/:userId', async (req, res) => {
+    try {
+        const user = await Users.findById(req.params.userId)
+            .populate({
+                path: 'viewingHistory.mediaId',
+                select: 'title cover slug' // On ne prend que le strict nécessaire
+            });
+
+        if (!user) {
+            return httpApiResponse(res, "404", "Utilisateur non trouvé", null);
+        }
+
+        // On renvoie l'historique trié du plus récent au plus ancien
+        const history = user.viewingHistory.reverse();
+
+        return httpApiResponse(res, "200", "Succès", history);
+    } catch (error) {
+        return httpApiResponse(res, "500", "Erreur serveur", error);
     }
 });
 
