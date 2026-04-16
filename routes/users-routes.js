@@ -227,7 +227,7 @@ router.get('/show-progress/:userId', async (request, response) => {
                 const media = item.mediaId.toObject();
                 const prog = item.toObject();
 
-                if (prog.mediaType === ('Series' || 'Animes') && media.seasons) {
+                if (media.seasons && prog.mediaType === 'Series' || prog.mediaType === 'Animes') {
                     const season = media.seasons.find(s => s.season === prog.seasonNumber);
                     if (season) {
                         const episode = season.episodes.find(e => e.episode === prog.episodeNumber);
