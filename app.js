@@ -51,11 +51,13 @@ module.exports.moviesConn = moviesConn;
 // 4. DÉFINITION DES ROUTES
 const moviesRoutes = require('./routes/movies-routes');
 const seriesRoutes = require('./routes/series-routes');
+const animesRoutes = require('./routes/animes-routes');
 const usersRoutes = require('./routes/users-routes');
 const actorsRoutes = require('./routes/actors-routes');
 
 app.use('/movies', moviesRoutes);
 app.use('/series', seriesRoutes);
+app.use('/animes', animesRoutes);
 app.use('/users', usersRoutes);
 app.use('/actors', actorsRoutes);
 

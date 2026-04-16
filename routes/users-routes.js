@@ -9,6 +9,7 @@ require('dotenv').config();
 const Users = require('../models/Users.model');
 const Series = require('../models/Series.model');
 const Movies = require('../models/Movies.model');
+const Animes = require('../models/Animes.model');
 
 const authenticateToken = (req, res, next) => {
     const token = req.cookies.token;
@@ -141,6 +142,13 @@ router.post('/update-progress', async (request, response) => {
                 const ep = seasonDoc?.episodes.find(e => e.episode == episodeNumber);
                 if (ep) durationMinutes = parseFloat(ep.duration);
             }
+        } else if (mediaType === 'Animes') {
+            const animesDoc = await Animes.findById(mId);
+            if (animesDoc && animesDoc.seasons) {
+                const seasonDoc = animesDoc.seasons.find(s => s.season == seasonNumber);
+                const ep = seasonDoc?.episodes.find(e => e.episode == episodeNumber);
+                if (ep) durationMinutes = parseFloat(ep.duration);
+            }
         } else {
             const movie = await Movies.findById(mId);
             durationMinutes = movie ? parseFloat(movie.duration) : 0;
@@ -219,7 +227,7 @@ router.get('/show-progress/:userId', async (request, response) => {
                 const media = item.mediaId.toObject();
                 const prog = item.toObject();
 
-                if (prog.mediaType === 'Series' && media.seasons) {
+                if (prog.mediaType === ('Series' || 'Animes') && media.seasons) {
                     const season = media.seasons.find(s => s.season === prog.seasonNumber);
                     if (season) {
                         const episode = season.episodes.find(e => e.episode === prog.episodeNumber);
