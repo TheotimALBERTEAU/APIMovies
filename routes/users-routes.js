@@ -293,4 +293,41 @@ router.post('/toggle-favorite', async (req, res) => {
     }
 });
 
+router.get('/profile/:id', async (req, res) => {
+    try {
+        const user = await Users.findById(req.params.id);
+        if (!user) return res.status(404).json({ code: 404, message: "Utilisateur non trouvé" });
+
+        res.json({
+            code: 200,
+            data: user
+        });
+    } catch (error) {
+        res.status(500).json({ code: 500, message: error.message });
+    }
+});
+
+router.get('/favorites/:userId', async (req, res) => {
+    try {
+        const user = await Users.findById(req.params.userId)
+            .populate({
+                path: 'favorites.mediaId',
+                select: 'slug'
+            });
+
+        if (!user) return res.status(404).json({ code: 404, message: "Utilisateur non trouvé" });
+        const simplifiedFavorites = user.favorites.map(fav => ({
+            id: fav.mediaId?._id,
+            slug: fav.mediaId?.slug
+        }));
+
+        res.json({
+            code: 200,
+            data: simplifiedFavorites
+        });
+    } catch (error) {
+        res.status(500).json({ code: 500, message: error.message });
+    }
+});
+
 module.exports = router;
