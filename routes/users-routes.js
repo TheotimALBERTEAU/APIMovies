@@ -276,4 +276,21 @@ router.get('/show-progress/:userId', async (request, response) => {
     }
 });
 
+router.post('/toggle-favorite', async (req, res) => {
+    const { userId, mediaId, mediaType } = req.body;
+
+    const user = await Users.findById(userId);
+    const index = user.favorites.findIndex(f => f.mediaId.toString() === mediaId);
+
+    if (index > -1) {
+        user.favorites.splice(index, 1); // Remove
+        await user.save();
+        return res.json({ message: "Retiré des favoris", isFavorite: false });
+    } else {
+        user.favorites.push({ mediaId, mediaType }); // Add
+        await user.save();
+        return res.json({ message: "Ajouté aux favoris", isFavorite: true });
+    }
+});
+
 module.exports = router;

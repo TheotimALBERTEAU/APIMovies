@@ -25,13 +25,20 @@ const usersSchema = new mongoose.Schema({
         mediaType: {
             type: String,
             required: true,
-            enum: ['Movies', 'Series']
+            enum: ['Movies', 'Series', 'Animes']
         },
         seasonNumber: Number,
         episodeNumber: Number,
         currentTime: Number,
         lastUpdated: { type: Date, default: Date.now }
     }],
+    favorites: [
+        {
+            mediaId: { type: mongoose.Schema.Types.ObjectId, refPath: 'favorites.mediaType' },
+            mediaType: { type: String, enum: ['Movies', 'Series', 'Animes'] },
+            addedAt: { type: Date, default: Date.now }
+        }
+    ]
 }, {
     timestamps: true
 }, {
