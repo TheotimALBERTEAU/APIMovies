@@ -374,6 +374,31 @@ router.get('/favorites/:userId', async (req, res) => {
     }
 });
 
+router.get('/favorites-details/:userId', async (req, res) => {
+    try {
+        const user = await Users.findById(req.params.userId)
+            .populate({
+                path: 'favorites.mediaId',
+                select: 'title cover slug type'
+            });
+
+        if (!user) {
+            return httpApiResponse(res, "404", "Utilisateur non trouvé", null);
+        }
+        const detailedFavorites = user.favorites
+            .filter(fav => fav.mediaId != null)
+            .map(fav => ({
+                mediaId: fav.mediaId,
+                addedAt: fav.addedAt
+            }));
+
+        return httpApiResponse(res, "200", "Succès", detailedFavorites);
+    } catch (error) {
+        console.error("Erreur favorites-details:", error);
+        return httpApiResponse(res, "500", "Erreur serveur", error.message);
+    }
+});
+
 router.post('/history/add', async (req, res) => {
     try {
         const { userId, mediaId, mediaType } = req.body;
@@ -422,9 +447,9 @@ router.get('/history/:userId', async (req, res) => {
         // On renvoie l'historique trié du plus récent au plus ancien
         const history = user.viewingHistory.reverse();
 
-        return httpApiResponse(res, "200", "Succès", history);
+        return httpApiResponse(res, "200", "Succès history add", history);
     } catch (error) {
-        return httpApiResponse(res, "500", "Erreur serveur", error);
+        return httpApiResponse(res, "500", "Erreur serveur history add", error);
     }
 });
 
