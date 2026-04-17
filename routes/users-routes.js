@@ -64,11 +64,28 @@ router.post('/login', async (request, response) => {
     }
 });
 
-router.get('/me', authenticateToken, (req, res) => {
-    return httpApiResponse(res, "200", "Utilisateur authentifié", {
-        id: req.user.id,
-        email: req.user.email
-    });
+router.get('/me', authenticateToken, async (req, res) => {
+    try {
+        // req.user.id vient de ton middleware authenticateToken
+        const user = await Users.findById(req.user.id);
+
+        if (!user) {
+            return httpApiResponse(res, "404", "Utilisateur non trouvé", null);
+        }
+
+        return httpApiResponse(res, "200", "Utilisateur authentifié", {
+            id: user._id,
+            pseudo: user.pseudo,
+            email: user.email,
+            profileSettings: user.profileSettings, // Contient banner et image
+            favorites: user.favorites,
+            progress: user.progress,
+            viewingHistory: user.viewingHistory
+        });
+    } catch (error) {
+        console.error("Erreur /me:", error);
+        return httpApiResponse(res, "500", "Erreur serveur", null);
+    }
 });
 
 router.post('/logout', (req, res) => {
